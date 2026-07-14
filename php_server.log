@@ -1,0 +1,109 @@
+<?php
+// generate_key.php
+require_once __DIR__ . '/config.php';
+
+function machine_fingerprint() {
+    $parts = [
+        php_uname('s'),
+        php_uname('n'),
+        php_uname('r'),
+        php_uname('v'),
+        php_uname('m'),
+        gethostname() ?: '',
+        php_uname() ?: ''
+    ];
+    $joined = implode('|', $parts);
+    return hash('sha256', $joined);
+}
+
+$f = machine_fingerprint();
+
+// If run via CLI, output simple key
+if (php_sapi_name() === 'cli') {
+    $expiry_days = 0;
+    // Optional: accept --days=N
+    foreach ($argv as $a) {
+        if (preg_match('/^--days=(\d+)$/', $a, $m)) $expiry_days = (int)$m[1];
+    }
+    if ($expiry_days > 0) {
+        $expiry_ts = time() + ($expiry_days * 86400);
+        $data = $f . '|' . $expiry_ts;
+        $sig = hash_hmac('sha256', $data, ACTIVATION_SECRET);
+        echo $sig . '|' . $expiry_ts . PHP_EOL;
+    } else {
+        $sig = hash_hmac('sha256', $f, ACTIVATION_SECRET);
+        echo $sig . PHP_EOL;
+    }
+    exit;
+}
+
+// If web mode, show UI
+$expiry_days = (int)($_GET['days'] ?? 0);
+if ($expiry_days > 0) {
+    $expiry_ts = time() + ($expiry_days * 86400);
+    $data = $f . '|' . $expiry_ts;
+    $sig = hash_hmac('sha256', $data, ACTIVATION_SECRET);
+    $key = $sig . '|' . $expiry_ts;
+} else {
+    $sig = hash_hmac('sha256', $f, ACTIVATION_SECRET);
+    $key = $sig;
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Generate Activation Key</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+<style>
+body { background: #f5f5f5; }
+.container { max-width: 700px; margin-top: 60px; }
+pre.fprint { background: #fafafa; padding: 10px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="panel panel-info">
+        <div class="panel-heading"><strong>Generate Activation Key</strong></div>
+        <div class="panel-body">
+            <p><strong>Fingerprint:</strong></p>
+            <pre class="fprint"><?= htmlspecialchars($f) ?></pre>
+
+            <p><strong>Activation Key:</strong></p>
+            <pre class="fprint" id="activationKey"><?= htmlspecialchars($key) ?></pre>
+
+            <button 
+                class="btn btn-primary" 
+                onclick="copyKey()" 
+                style="margin-bottom: 10px;">
+                Copy Activation Key
+            </button>
+
+            <p>
+                Use this key on the activation page of your app.<br>
+                To create an expiring key, pass <code>?days=7</code> to generate a 7-day expiry key (web mode)
+                or use CLI: <code>php generate_key.php --days=7</code>.
+            </p>
+
+            <a href="activation.php" 
+               class="btn btn-success" 
+               style="background-color: #007bff; border-color: #007bff; color: white;">
+               ← Back to Activation Page
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyKey() {
+    var keyText = document.getElementById("activationKey").innerText;
+    navigator.clipboard.writeText(keyText).then(function() {
+        alert("Activation key copied to clipboard!");
+    }, function(err) {
+        alert("Failed to copy key: " + err);
+    });
+}
+</script>
+</body>
+</html>
+

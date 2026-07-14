@@ -1,0 +1,104 @@
+<?php
+require_once __DIR__ . '/config.php';
+
+function is_activated(): bool {
+    if (!file_exists(ACTIVATED_FILE)) return false;
+    $data = json_decode(@file_get_contents(ACTIVATED_FILE), true);
+    return is_array($data) && ($data['activated'] ?? false) === true;
+}
+
+if (!is_activated()) {
+    header("Location: activation.php");
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Advanced Dork Search</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+<link rel="icon"  href="favicon.ico">
+</head>
+<body>
+  <div class="container" role="main">
+    <div class="header">
+      <h1 class="title">Advanced Dork Search</h1>
+      <p class="subtitle">Build advanced search queries. For personal & authorized use only.</p>
+    </div>
+
+    <!-- Search box -->
+    <div class="search-row">
+      <div class="search-input" aria-label="Search">
+        <input id="keyword" type="text" placeholder="Search or enter dork (e.g. site:example.com index of)">
+      </div>
+      <button id="clearBtn" class="icon-btn" title="Clear">✖</button>
+    </div>
+
+    <!-- Filetype tiles -->
+    <div class="tiles" id="tiles">
+      <div class="tile" data-ft="mkv|mp4|avi|mov|mpg|wmv" title="TV / Movies">
+        <div class="glyph">🎬</div>
+        <div class="meta"><strong>TV / Movies</strong><small>Video files & directories</small></div>
+      </div>
+
+      <div class="tile" data-ft="pdf|doc|docx|epub|mobi" title="Books">
+        <div class="glyph">📚</div>
+        <div class="meta"><strong>Books</strong><small>PDFs, EPUBs, Docs</small></div>
+      </div>
+
+      <div class="tile" data-ft="mp3|wav|flac|m4a" title="Music">
+        <div class="glyph">🎵</div>
+        <div class="meta"><strong>Music</strong><small>MP3, FLAC, WAV</small></div>
+      </div>
+
+      <div class="tile" data-ft="exe|iso|dmg|tar|7z|rar|zip|apk" title="Software / ISO / Games">
+        <div class="glyph">💾</div>
+        <div class="meta"><strong>Software / Games</strong><small>Installers & archives</small></div>
+      </div>
+
+      <div class="tile" data-ft="jpg|png|bmp|gif|tif|tiff|psd" title="Images">
+        <div class="glyph">🖼️</div>
+        <div class="meta"><strong>Images</strong><small>JPEG, PNG, GIF</small></div>
+      </div>
+
+      <div class="tile" data-ft="" title="Other">
+        <div class="glyph">✨</div>
+        <div class="meta"><strong>Other</strong><small>All filetypes</small></div>
+      </div>
+    </div>
+
+    <!-- Controls: engine, site, custom -->
+    <div class="controls" role="region" aria-label="Search options">
+      <select id="engine" class="form-control" title="Search engine">
+        <option value="google">Google</option>
+        <option value="startpage">Startpage</option>
+        <option value="searx">Searx (custom)</option>
+        <option value="filepursuit">FilePursuit</option>
+      </select>
+
+      <input id="site" type="text" class="form-control" placeholder="Target site (optional) e.g. example.com">
+
+      <input id="custom" type="text" class="form-control" placeholder='Custom dork (optional) e.g. intitle:"index of" "backup"'>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button id="searchBtn" class="btn-primary">Search</button>
+      <button id="copyBtn" class="btn-secondary">Copy Dork</button>
+      <button id="openUrlBtn" class="btn-secondary">Copy URL</button>
+    </div>
+
+    <div id="result" aria-live="polite"></div>
+
+    <div class="footer">
+      Do not use for unauthorized scanning. • Created by Avanish Kumar <br>
+      <a href="terms.php" style="color:var(--accent)">Terms of Use</a>
+    </div>
+  </div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

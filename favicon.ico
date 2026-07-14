@@ -1,0 +1,137 @@
+// run after DOM is available (script is loaded with defer in ui.php)
+(function(){
+  // UI elements
+  const tiles = document.querySelectorAll('.tile');
+  let selectedFiletype = '';
+  tiles.forEach(t => {
+    t.addEventListener('click', () => {
+      // toggle active
+      const already = t.classList.contains('active');
+      tiles.forEach(x=>x.classList.remove('active'));
+      if (!already) {
+        t.classList.add('active');
+        selectedFiletype = t.getAttribute('data-ft') || '';
+      } else {
+        selectedFiletype = '';
+      }
+      updateResultPreview();
+    });
+  });
+
+  const engineEl = document.getElementById('engine');
+  const siteEl = document.getElementById('site');
+  const customEl = document.getElementById('custom');
+  const keywordEl = document.getElementById('keyword');
+  const resultEl = document.getElementById('result');
+  const searchBtn = document.getElementById('searchBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const openUrlBtn = document.getElementById('openUrlBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  // helper to build dork
+  function buildDork() {
+    const keyword = (keywordEl.value || '').trim();
+    const site = (siteEl.value || '').trim();
+    const custom = (customEl.value || '').trim();
+    const ft = selectedFiletype;
+
+    const parts = [];
+    if (keyword) parts.push(keyword);
+    if (site) parts.push(`site:${site}`);
+    if (ft) parts.push(`+(${ft})`);
+    // add common filters to focus on open directories
+    parts.push('-inurl:(jsp|pl|php|html|aspx|htm|cf|shtml)');
+    parts.push('intitle:"index.of"');
+    if (custom) parts.push(custom);
+
+    return parts.join(' ');
+  }
+
+  // preview helper
+  function updateResultPreview() {
+    const dork = buildDork();
+    if (!dork.trim()) {
+      resultEl.innerHTML = '<span style="color:var(--muted)">No query yet — enter keywords or pick a tile.</span>';
+      return;
+    }
+    const engine = engineEl.value;
+    let url = '';
+    switch(engine){
+      case 'google':
+        url = 'https://www.google.com/search?q=' + encodeURIComponent(dork); break;
+      case 'startpage':
+        url = 'https://www.startpage.com/do/dsearch?query=' + encodeURIComponent(dork); break;
+      case 'searx':
+        // default to searx.me; if you want custom searx, change here or add UI to set URL
+        url = 'https://searx.me/?q=' + encodeURIComponent(dork); break;
+      case 'filepursuit':
+        // filepursuit uses a different path format; we fall back to search URL encoding
+        url = 'https://filepursuit.com/search/' + encodeURIComponent(dork.replace(/ /g,'+')) + '/type/all'; break;
+      default:
+        url = 'https://www.google.com/search?q=' + encodeURIComponent(dork);
+    }
+    resultEl.innerHTML = '<div><strong>Dork:</strong> <span style="color:var(--muted)">'+escapeHtml(dork)+'</span></div>'
+                       + '<div style="margin-top:8px"><strong>URL:</strong> <a href="'+url+'" target="_blank" style="color:var(--accent)">'+escapeHtml(url)+'</a></div>';
+  }
+
+  // escape helper
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m];}); }
+
+  // events
+  keywordEl.addEventListener('input', updateResultPreview);
+  siteEl.addEventListener('input', updateResultPreview);
+  customEl.addEventListener('input', updateResultPreview);
+  engineEl.addEventListener('change', updateResultPreview);
+  clearBtn.addEventListener('click', () => { keywordEl.value=''; siteEl.value=''; customEl.value=''; tiles.forEach(x=>x.classList.remove('active')); selectedFiletype=''; updateResultPreview(); });
+
+  // search / copy actions
+  searchBtn.addEventListener('click', () => {
+    const dork = buildDork().trim();
+    if (!dork) { alert('Enter a keyword or dork first.'); return; }
+    const engine = engineEl.value;
+    let url = '';
+    switch(engine){
+      case 'google': url = 'https://www.google.com/search?q=' + encodeURIComponent(dork); break;
+      case 'startpage': url = 'https://www.startpage.com/do/dsearch?query=' + encodeURIComponent(dork); break;
+      case 'searx': url = 'https://searx.me/?q=' + encodeURIComponent(dork); break;
+      case 'filepursuit': url = 'https://filepursuit.com/search/' + encodeURIComponent(dork.replace(/ /g,'+')) + '/type/all'; break;
+    }
+    window.open(url, '_blank');
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const dork = buildDork().trim();
+    if (!dork) { alert('Nothing to copy'); return; }
+    try {
+      await navigator.clipboard.writeText(dork);
+      copyBtn.textContent = 'Copied ✓';
+      setTimeout(()=>copyBtn.textContent = 'Copy Dork', 1200);
+    } catch(e) {
+      alert('Copy failed: '+e);
+    }
+  });
+
+  openUrlBtn.addEventListener('click', async () => {
+    const dork = buildDork().trim();
+    if (!dork) { alert('Nothing to copy'); return; }
+    const engine = engineEl.value;
+    let url = '';
+    switch(engine){
+      case 'google': url = 'https://www.google.com/search?q=' + encodeURIComponent(dork); break;
+      case 'startpage': url = 'https://www.startpage.com/do/dsearch?query=' + encodeURIComponent(dork); break;
+      case 'searx': url = 'https://searx.me/?q=' + encodeURIComponent(dork); break;
+      case 'filepursuit': url = 'https://filepursuit.com/search/' + encodeURIComponent(dork.replace(/ /g,'+')) + '/type/all'; break;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      openUrlBtn.textContent = 'URL Copied ✓';
+      setTimeout(()=>openUrlBtn.textContent = 'Copy URL', 1200);
+    } catch(e) {
+      alert('Copy failed: '+e);
+    }
+  });
+
+  // init preview
+  updateResultPreview();
+
+})();
