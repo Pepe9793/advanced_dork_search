@@ -29,9 +29,6 @@ This repository is released under the **MIT License**.
 
 ---
 
-
----
-
 ## Requirements
 - Windows OS 
 - Modern web browser (Chrome, Edge, Firefox).
